@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام جرد الأجهزة الذكي</title>
+    
+    <!-- استدعاء مكتبات OCR وقراءة الإكسل من الـ CDN -->
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://jsdelivr.net"></script>
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; 
+            margin: 0; 
+            padding: 15px; 
+            text-align: center; 
+            color: #333; 
+        }
+        .container { 
+            max-width: 500px; 
+            margin: 0 auto; 
+        }
+        h1 {
+            font-size: 22px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .camera-container { 
+            width: 100%; 
+            max-height: 280px; 
+            overflow: hidden; 
+            border-radius: 12px; 
+            background: #000; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            margin-bottom: 15px; 
+            position: relative;
+        }
+        video { 
+            width: 100%; 
+            height: auto; 
+            display: block; 
+        }
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 8px; 
+            background-color: #28a745; 
+            color: white; 
+            cursor: pointer; 
+            margin-bottom: 10px; 
+            transition: background 0.2s;
+        }
+        button:active {
+            opacity: 0.9;
+        }
+        button.secondary { 
+            background-color: #007bff; 
+        }
+        button#save-btn { 
+            background-color: #ffc107; 
+            color: #212529; 
+            margin-top: 15px; 
+        }
+        .status { 
+            font-weight: bold; 
+            color: #495057; 
+            margin: 15px 0; 
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .result-card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            text-align: right; 
+            margin-bottom: 20px;
+        }
+        .result-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 8px;
+        }
+        .result-card label { 
+            display: block; 
+            margin-top: 12px; 
+            font-weight: bold; 
+            font-size: 14px;
+            color: #495057;
+        }
+        .result-card input { 
+            width: 100%; 
+            padding: 10px; 
+            margin-top: 6px; 
+            border: 1px solid #ced4da; 
+            border-radius: 6px; 
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>نظام جرد الأجهزة بالذكاء الاصطناعي</h1>
+        
+        <!-- نافذة عرض الكاميرا المباشرة -->
+        <div class="camera-container">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="snapshot" style="display:none;"></canvas>
+        </div>
+
+        <div class="controls">
+            <button id="capture-btn">التقاط وتحليل الملصق</button>
+            <button id="export-btn" class="secondary">تحميل ملف Excel</button>
+        </div>
+
+        <!-- حالة المعالجة -->
+        <div id="status" class="status">جاهز للمسح... قم بتوجيه الكاميرا نحو ملصق الجهاز</div>
+
+        <!-- نافذة مراجعة البيانات المستخرجة -->
+        <div class="result-card">
+            <h3>البيانات المستخرجة (يمكنك التعديل):</h3>
+            
+            <label>نوع الجهاز:</label>
+            <input type="text" id="device-type" placeholder="مثال: حاسوب محمول، شاشة...">
+            
+            <label>الشركة المصنعة:</label>
+            <input type="text" id="device-brand" placeholder="مثال: Dell, HP, Apple...">
+            
+            <label>الموديل (Model):</label>
+            <input type="text" id="device-model" placeholder="رقم الموديل">
+            
+            <label>الرقم التسلسلي (S/N):</label>
+            <input type="text" id="device-serial" placeholder="الرقم التسلسلي للجهاز">
+
+            <button id="save-btn">تأكيد وحفظ في القائمة</button>
+        </div>
+    </div>
+    <script>
+        let inventoryList = [];
+
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('snapshot');
+        const statusDiv = document.getElementById('status');
+
+        // 1. تشغيل الكاميرا الخلفية للهاتف
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(stream => { 
+                    video.srcObject = stream; 
+                })
+                .catch(err => {
+                    statusDiv.innerText = "تنبيه الكاميرا: يرجى التأكد من تشغيل الملف عبر رابط آمن HTTPS ومنح صلاحية الكاميرا.";
+                    console.error(err);
+                });
+        } else {
+            statusDiv.innerText = "المتصفح لا يدعم الوصول إلى الكاميرا.";
+        }
+
+        // 2. التقاط صورة وتحليلها عند الضغط على الزر
+        document.getElementById('capture-btn').addEventListener('click', async () => {
+            statusDiv.innerText = "جاري التقاط الصورة وقراءة النص المكتوب...";
+            
+            try {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                // استخدام Tesseract.js للتعرف الضوئي على الحروف
+                const result = await Tesseract.recognize(imageData, 'eng');
+                const scannedText = result.data.text;
+                
+                if (!scannedText.trim()) {
+                    statusDiv.innerText = "لم يتم رصد أي نصوص واضحة، يرجى تقريب الكاميرا والمحاولة مجدداً.";
+                    return;
+                }
+
+                // يمكنك وضع مفتاح Gemini API هنا للتحليل الذكي التلقائي
+                const GEMINI_API_KEY = "ضع_مفتاح_الـ_API_الخاص_بك_هنا"; 
+                
+                if (GEMINI_API_KEY === "ضع_مفتاح_الـ_API_الخاص_بك_هنا" || GEMINI_API_KEY === "") {
+                    // تشغيل تجريبي بدون ذكاء اصطناعي (يضع النص المقروء في خانة الموديل للمراجعة اليدوية)
+                    document.getElementById('device-model').value = scannedText.substring(0, 100) + "...";
+                    statusDiv.innerText = "تمت قراءة النص! (يرجى ملء الخانات يدوياً لعدم وجود مفتاح API للذكاء الاصطناعي).";
+                } else {
+                    statusDiv.innerText = "جاري فرز البيانات بالذكاء الاصطناعي (Gemini)...";
+                    await analyzeWithAI(scannedText, GEMINI_API_KEY);
+                }
+
+            } catch (error) {
+                statusDiv.innerText = "حدث خطأ أثناء المعالجة: " + error.message;
+                console.error(error);
+            }
+        });
+
+        // 3. دالة الربط مع ذكاء Gemini الاصطناعي لتنظيم البيانات
+        async function analyzeWithAI(text, apiKey) {
+            const url = `https://googleapis.com{apiKey}`;
+
+            const prompt = `حلل النص التالي المستخرج من ملصق مواصفات جهاز، واستخرج منه البيانات المطلوبة بصيغة JSON حصراً بدون أي نصوص تمهيدية أو علامات مخفية وبالمفاتيح التالية:
+            {"type": "نوع الجهاز باللغة العربية مثل حاسوب محمول أو شاشة", "brand": "اسم الشركة المصنعة", "model": "رقم الموديل بدقة", "serial": "الرقم التسلسلي S/N بدقة"}. 
+            إذا لم تجد أحد الحقول اتركه فارغاً. النص المستخرج هو: ${text}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                
+                const data = await response.json();
+                let aiText = data.candidates.content.parts.text;
+                
+                aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const deviceJSON = JSON.parse(aiText);
+
+                document.getElementById('device-type').value = deviceJSON.type || '';
+                document.getElementById('device-brand').value = deviceJSON.brand || '';
+                document.getElementById('device-model').value = deviceJSON.model || '';
+                document.getElementById('device-serial').value = deviceJSON.serial || '';
+                
+                statusDiv.innerText = "تم التحليل بنجاح! راجع البيانات المستخرجة واضغط حفظ.";
+            } catch (e) {
+                statusDiv.innerText = "فشل التحليل التلقائي، يمكنك كتابة البيانات يدوياً في الخانات بالأسفل.";
+                console.error(e);
+            }
+        }
+
+        // 4. حفظ البيانات الحالية في القائمة المؤقتة
+        document.getElementById('save-btn').addEventListener('click', () => {
+            const type = document.getElementById('device-type').value;
+            const brand = document.getElementById('device-brand').value;
+            const model = document.getElementById('device-model').value;
+            const serial = document.getElementById('device-serial').value;
+
+            if(!type && !brand && !model && !serial) {
+                alert("برجاء ملء خانة واحدة على الأقل قبل الحفظ!");
+                return;
+            }
+
+            const currentDevice = {
+                "نوع الجهاز": type,
+                "الشركة المصنعة": brand,
+                "الموديل": model,
+                "الرقم التسلسلي": serial,
+                "تاريخ الجرد": new Date().toLocaleDateString('ar-EG')
+            };
+            
+            inventoryList.push(currentDevice);
+            statusDiv.innerText = `تم الحفظ بنجاح! إجمالي الأجهزة المسجلة: ${inventoryList.length}`;
+            
+            document.getElementById('device-type').value = '';
+            document.getElementById('device-brand').value = '';
+            document.getElementById('device-model').value = '';
+            document.getElementById('device-serial').value = '';
+        });
+
+        // 5. تصدير القائمة بأكملها إلى ملف Excel وتحميله
+        document.getElementById('export-btn').addEventListener('click', () => {
+            if(inventoryList.length === 0) {
+                alert("لا توجد أجهزة مسجلة في القائمة حالياً لتصديرها!");
+                return;
+            }
+            const worksheet = XLSX.utils.json_to_sheet(inventoryList);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير الجرد");
+            
+            XLSX.writeFile(workbook, `جرد_الأجهزة_${new Date().toISOString().slice(0,10)}.xlsx`);
+            statusDiv.innerText = "تم تحميل ملف Excel بنجاح!";
+        });
+    </script>
+</body>
+</html>
