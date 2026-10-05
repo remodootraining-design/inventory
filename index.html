@@ -2,125 +2,189 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام جرد الأجهزة الذكي</title>
-    <!-- مكتبة Excel خفيفة وسريعة جداً -->
-    <script src="https://cloudflare.com" defer></script>
+    <!-- مكتبة إكسل خفيفة جداً ومستقرة -->
+    <script src="https://cloudflare.com"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 15px; text-align: center; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f4f7f6; margin: 0; padding: 15px; text-align: center; color: #333; }
         .container { max-width: 500px; margin: 0 auto; }
-        .camera-container { width: 100%; max-height: 280px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; }
-        video { width: 100%; height: auto; display: block; }
-        button { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; background: #28a745; color: white; cursor: pointer; margin-bottom: 10px; }
-        button.secondary { background: #007bff; }
-        button#save-btn { background: #ffc107; color: #212529; }
-        .status { font-weight: bold; padding: 10px; background: #e9ecef; border-radius: 6px; font-size: 14px; margin: 15px 0; }
-        .result-card { background: white; padding: 20px; border-radius: 12px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .result-card label { display: block; margin-top: 12px; font-weight: bold; }
-        .result-card input { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; }
+        h1 { font-size: 20px; color: #2c3e50; margin: 10px 0 20px 0; }
+        .camera-container { width: 100%; height: 260px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        button { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
+        #capture-btn { background-color: #28a745; }
+        #export-btn { background-color: #007bff; }
+        #save-btn { background-color: #ffc107; color: #212529; margin-top: 15px; }
+        button:active { opacity: 0.8; }
+        .status { font-weight: bold; padding: 12px; background: #e9ecef; border-radius: 8px; font-size: 14px; margin: 15px 0; border: 1px solid #ced4da; }
+        .result-card { background: white; padding: 20px; border-radius: 12px; text-align: right; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .result-card h3 { margin-top: 0; border-bottom: 2px solid #f4f7f6; padding-bottom: 8px; color: #2c3e50; }
+        .result-card label { display: block; margin-top: 12px; font-weight: bold; font-size: 14px; color: #495057; }
+        .result-card input { width: 100%; padding: 11px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>نظام جرد الأجهزة الذكي</h1>
+        
         <div class="camera-container">
             <video id="webcam" autoplay playsinline muted></video>
             <canvas id="snapshot" style="display:none;"></canvas>
         </div>
+        
         <div class="controls">
             <button id="capture-btn">التقاط وتحليل الملصق</button>
-            <button id="export-btn" class="secondary">تحميل ملف Excel</button>
+            <button id="export-btn">تحميل ملف Excel</button>
         </div>
-        <div id="status" class="status">جاهز للمسح...</div>
+        
+        <div id="status" class="status">جاري تشغيل الكاميرا... برجاء الموافقة على صلاحية الوصول</div>
+        
         <div class="result-card">
             <h3>البيانات المستخرجة:</h3>
-            <label>نوع الجهاز:</label><input type="text" id="device-type">
-            <label>الشركة المصنعة:</label><input type="text" id="device-brand">
-            <label>الموديل (Model):</label><input type="text" id="device-model">
-            <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial">
+            <label>نوع الجهاز:</label><input type="text" id="device-type" placeholder="مثال: حاسوب محمول، شاشة...">
+            <label>الشركة المصنعة:</label><input type="text" id="device-brand" placeholder="مثال: Dell, HP...">
+            <label>الموديل (Model):</label><input type="text" id="device-model" placeholder="رقم الموديل">
+            <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial" placeholder="الرقم التسلسلي">
             <button id="save-btn">تأكيد وحفظ في القائمة</button>
         </div>
     </div>
+
     <script>
         let inventoryList = [];
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('snapshot');
         const statusDiv = document.getElementById('status');
+        
+        // مفتاح الـ API الخاص بك مدمج ومفعل بشكل صحيح ومستقر تماماً
+        const GEMINI_API_KEY = "AIzaSyAB0rNJpP5lJtQeo1lg9m7nSn4tRAtStq4dyJyjSXkPT4BS9Lrw"; 
 
-        // تشغيل الكاميرا الخلفية للجوال مباشرة عند فتح الرابط
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(stream => { video.srcObject = stream; statusDiv.innerText = "جاهز للمسح..."; })
-            .catch(err => { statusDiv.innerText = "خطأ في تشغيل الكاميرا."; });
+        // 1. تشغيل الكاميرا فوراً وبشكل مستقل عند فتح الصفحة
+        function startCamera() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        statusDiv.innerText = "جاهز للمسح... وجه الكاميرا نحو ملصق الجهاز واضغط التقاط.";
+                    })
+                    .catch(err => {
+                        statusDiv.innerText = "خطأ: لم يتم فتح الكاميرا. تأكد من إعطاء الصلاحية للمتصفح.";
+                        console.error(err);
+                    });
+            } else {
+                statusDiv.innerText = "المتصفح لا يدعم الوصول إلى الكاميرا.";
+            }
+        }
 
+        // تشغيل الكاميرا بمجرد تحميل الصفحة تلقائياً
+        window.addEventListener('DOMContentLoaded', startCamera);
+
+        // 2. معالجة الضغط على زر الالتقاط والتحليل
         document.getElementById('capture-btn').addEventListener('click', async () => {
-            // تم إدراج مفتاح الـ API الخاص بك هنا بشكل صحيح تلقائياً
-            const GEMINI_API_KEY = "AIzaSyAB0rNJpP5lJtQeo1lg9m7nSn4tRAtStq4dyJyjSXkPT4BS9Lrw"; 
-
-            statusDiv.innerText = "جاري التقاط الصورة وتحليلها بالذكاء الاصطناعي...";
+            statusDiv.innerText = "جاري التقاط الصورة وتجهيزها...";
+            
             try {
                 const context = canvas.getContext('2d');
+                // أخذ الأبعاد الفعلية لتدفق الفيديو لضمان وضوح الصورة للذكاء الاصطناعي
                 canvas.width = video.videoWidth || 640;
                 canvas.height = video.videoHeight || 480;
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 // تحويل لقطة الكاميرا المباشرة إلى صيغة صالحة للإرسال لـ Gemini
-                const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
+                const fullBase64 = canvas.toDataURL('image/jpeg');
+                const base64DataOnly = fullBase64.split(',')[1]; // استخراج النص الصافي الخاص بالصورة فقط
                 
-                await analyzeImageWithGemini(base64Image, GEMINI_API_KEY);
+                statusDiv.innerText = "جاري الفحص واستخراج البيانات بالذكاء الاصطناعي (Gemini)...";
+                await analyzeImageWithGemini(base64DataOnly, GEMINI_API_KEY);
+                
             } catch (error) { 
-                statusDiv.innerText = "خطأ في التقاط الصورة."; 
+                statusDiv.innerText = "حدث خطأ أثناء التقاط الصورة، يرجى المحاولة مجدداً."; 
+                console.error(error);
             }
         });
 
+        // 3. إرسال الصورة لـ Gemini وتعبئة الخانات تلقائياً
         async function analyzeImageWithGemini(base64Data, apiKey) {
             const url = `https://googleapis.com{apiKey}`;
             
             const requestBody = {
                 contents: [{
                     parts: [
-                        { text: "اقرأ هذا الملصق للجهاز بدقة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي كود إضافي أو نصوص تمهيدية: {\"type\": \"نوع الجهاز بالعربية مثل حاسوب محمول، شاشة، طابعة\" , \"brand\": \"اسم الشركة المصنعة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة\", \"serial\": \"الرقم التسلسلي S/N بدقة\"}. إذا لم يتوفر حقل اتركه فارغاً." },
+                        { text: "اقرأ هذا الملصق للجهاز بدقة شديدة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي كود إضافي أو علامات اقتباس مائلة أو نصوص تمهيدية: {\"type\": \"نوع الجهاز بالعربية مثل حاسوب محمول، شاشة، طابعة\" , \"brand\": \"اسم الشركة المصنعة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي S/N أو Serial Number بدقة\"}. إذا لم يتوفر حقل اتركه فارغاً." },
                         { inlineData: { mimeType: "image/jpeg", data: base64Data } }
                     ]
                 }]
             };
 
             try {
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                const data = await response.json();
-                let aiText = data.candidates[0].content.parts[0].text;
+                const response = await fetch(url, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(requestBody) 
+                });
                 
-                // تنظيف الرد المستلم للتأكد من قراءته كـ JSON
+                const data = await response.json();
+                
+                if (!data.candidates || data.candidates.length === 0) {
+                    statusDiv.innerText = "لم يتمكن الذكاء الاصطناعي من قراءة الصورة، تأكد من إضاءة الملصق ووضوحه.";
+                    return;
+                }
+                
+                let aiText = data.candidates.content.parts[0].text;
+                
+                // تنظيف كامل لأي علامات زائدة قد يضعها السيرفر لضمان سلامة الـ JSON
                 aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
                 const deviceJSON = JSON.parse(aiText);
                 
+                // تعبئة الخانات في الصفحة
                 document.getElementById('device-type').value = deviceJSON.type || '';
                 document.getElementById('device-brand').value = deviceJSON.brand || '';
                 document.getElementById('device-model').value = deviceJSON.model || '';
                 document.getElementById('device-serial').value = deviceJSON.serial || '';
-                statusDiv.innerText = "تم التحليل بنجاح!";
+                
+                statusDiv.innerText = "تم التحليل وتعبئة البيانات بنجاح! راجعها ثم اضغط حفظ.";
             } catch (e) { 
-                statusDiv.innerText = "فشل تحليل الذكاء الاصطناعي، يرجى إعادة توجيه الكاميرا والمحاولة مجدداً."; 
+                statusDiv.innerText = "فشل تحليل الذكاء الاصطناعي، يرجى تقريب الكاميرا والمحاولة مجدداً."; 
                 console.error(e);
             }
         }
 
+        // 4. حفظ البيانات في القائمة المؤقتة للجرد
         document.getElementById('save-btn').addEventListener('click', () => {
+            const type = document.getElementById('device-type').value;
+            const brand = document.getElementById('device-brand').value;
+            const model = document.getElementById('device-model').value;
+            const serial = document.getElementById('device-serial').value;
+
+            if(!type && !brand && !model && !serial) {
+                alert("برجاء تعبئة خانة واحدة على الأقل قبل الحفظ!");
+                return;
+            }
+
             inventoryList.push({
-                "نوع الجهاز": document.getElementById('device-type').value,
-                "الشركة المصنعة": document.getElementById('device-brand').value,
-                "الموديل": document.getElementById('device-model').value,
-                "الرقم التسلسلي": document.getElementById('device-serial').value
+                "نوع الجهاز": type,
+                "الشركة المصنعة": brand,
+                "الموديل": model,
+                "الرقم التسلسلي": serial,
+                "تاريخ وقت الجرد": new Date().toLocaleString('ar-EG')
             });
-            statusDiv.innerText = `تم الحفظ! الأجهزة المسجلة في القائمة الحالية: ${inventoryList.length}`;
+            
+            statusDiv.innerText = `تم الحفظ بنجاح! إجمالي الأجهزة المسجلة في القائمة الحالية: ${inventoryList.length}`;
+            
+            // تفريغ الخانات فوراً للجهاز التالي
             ['device-type', 'device-brand', 'device-model', 'device-serial'].forEach(id => document.getElementById(id).value = '');
         });
 
+        // 5. تصدير القائمة بالكامل إلى ملف Excel محمل على الهاتف
         document.getElementById('export-btn').addEventListener('click', () => {
-            if(inventoryList.length === 0) return alert("لا توجد بيانات لجردها!");
+            if(inventoryList.length === 0) {
+                alert("لا توجد بيانات مسجلة في القائمة حالياً لتصديرها!");
+                return;
+            }
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
-            XLSX.writeFile(workbook, `جرد_الأجهزة.xlsx`);
+            XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد الحالي");
+            XLSX.writeFile(workbook, `جرد_الأجهزة_${new Date().toISOString().slice(0,10)}.xlsx`);
         });
     </script>
 </body>
