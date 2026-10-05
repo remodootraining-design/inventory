@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>نظام جرد الأجهزة الذكي</title>
-    <!-- روابط سريعة ومضغوطة للمكتبات -->
-    <script src="https://cloudflare.com" async></script>
+    <!-- مكتبة Excel خفيفة وسريعة جداً -->
     <script src="https://cloudflare.com" defer></script>
     <style>
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 15px; text-align: center; }
@@ -32,7 +31,7 @@
             <button id="capture-btn">التقاط وتحليل الملصق</button>
             <button id="export-btn" class="secondary">تحميل ملف Excel</button>
         </div>
-        <div id="status" class="status">جاري تشغيل الكاميرا...</div>
+        <div id="status" class="status">جاهز للمسح...</div>
         <div class="result-card">
             <h3>البيانات المستخرجة:</h3>
             <label>نوع الجهاز:</label><input type="text" id="device-type">
@@ -48,46 +47,61 @@
         const canvas = document.getElementById('snapshot');
         const statusDiv = document.getElementById('status');
 
+        // تشغيل الكاميرا الخلفية للجوال مباشرة عند فتح الرابط
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
             .then(stream => { video.srcObject = stream; statusDiv.innerText = "جاهز للمسح..."; })
             .catch(err => { statusDiv.innerText = "خطأ في تشغيل الكاميرا."; });
 
         document.getElementById('capture-btn').addEventListener('click', async () => {
-            statusDiv.innerText = "جاري قراءة النص...";
+            // تم إدراج مفتاح الـ API الخاص بك هنا بشكل صحيح تلقائياً
+            const GEMINI_API_KEY = "AIzaSyAB0rNJpP5lJtQeo1lg9m7nSn4tRAtStq4dyJyjSXkPT4BS9Lrw"; 
+
+            statusDiv.innerText = "جاري التقاط الصورة وتحليلها بالذكاء الاصطناعي...";
             try {
                 const context = canvas.getContext('2d');
                 canvas.width = video.videoWidth || 640;
                 canvas.height = video.videoHeight || 480;
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                const result = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'eng');
-                const scannedText = result.data.text;
+                // تحويل لقطة الكاميرا المباشرة إلى صيغة صالحة للإرسال لـ Gemini
+                const base64Image = canvas.toDataURL('image/jpeg').split(',')[1];
                 
-                const GEMINI_API_KEY = "ضع_مفتاح_الـ_API_الخاص_بك_هنا"; 
-                if (GEMINI_API_KEY === "ضع_مفتاح_الـ_API_الخاص_بك_هنا" || !GEMINI_API_KEY) {
-                    document.getElementById('device-model').value = scannedText.substring(0, 50);
-                    statusDiv.innerText = "تمت القراءة يدوياً (لعدم وجود مفتاح API).";
-                } else {
-                    statusDiv.innerText = "جاري التحليل بالذكاء الاصطناعي...";
-                    await analyzeWithAI(scannedText, GEMINI_API_KEY);
-                }
-            } catch (error) { statusDiv.innerText = "خطأ في المعالجة."; }
+                await analyzeImageWithGemini(base64Image, GEMINI_API_KEY);
+            } catch (error) { 
+                statusDiv.innerText = "خطأ في التقاط الصورة."; 
+            }
         });
 
-        async function analyzeWithAI(text, apiKey) {
+        async function analyzeImageWithGemini(base64Data, apiKey) {
             const url = `https://googleapis.com{apiKey}`;
-            const prompt = `حلل النص المستخرج من ملصق جهاز وأعد النتيجة بصيغة JSON حصراً بدون أي كود إضافي ومخفي: {"type": "نوع الجهاز بالعربية", "brand": "اسم الشركة", "model": "رقم الموديل بدقة", "serial": "الرقم التسلسلي بدقة"}. النص هو: ${text}`;
+            
+            const requestBody = {
+                contents: [{
+                    parts: [
+                        { text: "اقرأ هذا الملصق للجهاز بدقة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي كود إضافي أو نصوص تمهيدية: {\"type\": \"نوع الجهاز بالعربية مثل حاسوب محمول، شاشة، طابعة\" , \"brand\": \"اسم الشركة المصنعة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة\", \"serial\": \"الرقم التسلسلي S/N بدقة\"}. إذا لم يتوفر حقل اتركه فارغاً." },
+                        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                    ]
+                }]
+            };
+
             try {
-                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
                 const data = await response.json();
-                let aiText = data.candidates[0].content.parts[0].text.replace(/```json/g, "").replace(/```/g, "").trim();
+                let aiText = data.candidates[0].content.parts[0].text;
+                
+                // تنظيف الرد المستلم للتأكد من قراءته كـ JSON
+                aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
                 const deviceJSON = JSON.parse(aiText);
+                
                 document.getElementById('device-type').value = deviceJSON.type || '';
                 document.getElementById('device-brand').value = deviceJSON.brand || '';
                 document.getElementById('device-model').value = deviceJSON.model || '';
                 document.getElementById('device-serial').value = deviceJSON.serial || '';
                 statusDiv.innerText = "تم التحليل بنجاح!";
-            } catch (e) { statusDiv.innerText = "فشل التحليل، عبيء يدوياً."; }
+            } catch (e) { 
+                statusDiv.innerText = "فشل تحليل الذكاء الاصطناعي، يرجى إعادة توجيه الكاميرا والمحاولة مجدداً."; 
+                console.error(e);
+            }
         }
 
         document.getElementById('save-btn').addEventListener('click', () => {
@@ -97,12 +111,12 @@
                 "الموديل": document.getElementById('device-model').value,
                 "الرقم التسلسلي": document.getElementById('device-serial').value
             });
-            statusDiv.innerText = `تم الحفظ! الأجهزة: ${inventoryList.length}`;
+            statusDiv.innerText = `تم الحفظ! الأجهزة المسجلة في القائمة الحالية: ${inventoryList.length}`;
             ['device-type', 'device-brand', 'device-model', 'device-serial'].forEach(id => document.getElementById(id).value = '');
         });
 
         document.getElementById('export-btn').addEventListener('click', () => {
-            if(inventoryList.length === 0) return alert("لا توجد بيانات!");
+            if(inventoryList.length === 0) return alert("لا توجد بيانات لجردها!");
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
