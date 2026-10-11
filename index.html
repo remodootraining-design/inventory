@@ -28,8 +28,7 @@
     <div class="container">
         <h1>نظام جرد الأجهزة الذكي</h1>
         
-        <!-- زر صغير يوضح حالة المفتاح ويسمح بتغييره بأي وقت بضغطة زر -->
-        <div class="key-badge" id="key-status" onclick="askForKey()">🔑 مفتاح الـ API نشط (اضغط للتعديل)</div>
+        <div class="key-badge" id="key-status" onclick="askForKey()">🔑 إعدادات المفتاح (اضغط للتعديل)</div>
 
         <div class="camera-container">
             <video id="webcam" autoplay playsinline muted></video>
@@ -59,7 +58,6 @@
         const statusDiv = document.getElementById('status');
         const keyStatusObj = document.getElementById('key-status');
 
-        // دالة مريحة تطلب المفتاح مباشرة عند فتح التطبيق لمرة واحدة
         function askForKey() {
             const currentKey = localStorage.getItem('gemini_key') || "";
             const userKey = prompt("الرجاء لصق مفتاح Gemini API الجديد الخاص بك هنا:", currentKey);
@@ -67,16 +65,16 @@
             if (userKey !== null && userKey.trim() !== "") {
                 localStorage.setItem('gemini_key', userKey.trim());
                 updateBadgeStatus(true);
-                statusDiv.innerText = "تم حفظ المفتاح الجديد بنجاح في ذاكرة الهاتف! جاهز للمسح.";
+                statusDiv.innerText = "تم حفظ المفتاح بنجاح! وجه الكاميرا واضغط التقاط.";
             } else if (!localStorage.getItem('gemini_key')) {
                 updateBadgeStatus(false);
-                statusDiv.innerText = "⚠️ تنبيه: يرجى الضغط على الزر الأخضر بالأعلى وإدخال المفتاح لتشغيل الذكاء الاصطناعي.";
+                statusDiv.innerText = "⚠️ تنبيه: يرجى الضغط على الزر بالأعلى وإدخال المفتاح لتشغيل الذكاء الاصطناعي.";
             }
         }
 
         function updateBadgeStatus(isActive) {
             if(isActive) {
-                keyStatusObj.innerText = "✅ مفتاح الـ API نشط ومحفوظ (اضغط للتعديل)";
+                keyStatusObj.innerText = "✅ مفتاح الـ API محفوظ ونشط (اضغط للتعديل)";
                 keyStatusObj.style.background = "#28a745";
             } else {
                 keyStatusObj.innerText = "❌ لم يتم إدخال مفتاح الـ API (اضغط هنا لإدخاله)";
@@ -84,19 +82,17 @@
             }
         }
 
-        // تشغيل النظام تلقائياً عند الدخول للصفحة
         window.addEventListener('DOMContentLoaded', () => {
             const savedKey = localStorage.getItem('gemini_key');
-            if (savedKey && savedKey.startsWith("AIzaSy")) {
+            if (savedKey && savedKey.trim() !== "") {
                 updateBadgeStatus(true);
             } else {
                 updateBadgeStatus(false);
-                setTimeout(askForKey, 800); // إظهار نافذة الطلب التلقائية فوراً
+                setTimeout(askForKey, 800);
             }
             startCamera();
         });
 
-        // تشغيل الكاميرا بشكل مستقل وثابت
         function startCamera() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
@@ -107,20 +103,19 @@
                         }
                     })
                     .catch(err => {
-                        statusDiv.innerText = "خطأ: الكاميرا متوقفة. تأكد من إعطاء الصلاحية للمتصفح.";
+                        statusDiv.innerText = "خطأ: الكاميرا متوقفة. تأكد من فتح الرابط في متصفح متخفي ومنح الصلاحية.";
                         console.error(err);
                     });
             } else {
-                statusDiv.innerText = "المتصفح لا يدعم تشغيل الكاميرا.";
+                statusDiv.innerText = "المتصفح لا يدعم الكاميرا.";
             }
         }
 
-        // 2. التقاط الصورة وإرسالها فوراً
         document.getElementById('capture-btn').addEventListener('click', async () => {
             const apiKey = localStorage.getItem('gemini_key');
             
-            if (!apiKey || !apiKey.startsWith("AIzaSy")) {
-                statusDiv.innerText = "⚠️ خطأ: لا يوجد مفتاح نشط. اضغط على الزر بالأعلى لإدخال مفتاح صحيح أولاً.";
+            if (!apiKey || apiKey.trim() === "") {
+                statusDiv.innerText = "⚠️ خطأ: لا يوجد مفتاح نشط. اضغط على الزر بالأعلى لإدخال المفتاح أولاً.";
                 askForKey();
                 return;
             }
@@ -133,18 +128,17 @@
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 const fullBase64 = canvas.toDataURL('image/jpeg');
-                const base64DataOnly = fullBase64.split(',')[1]; // استخراج النص الصافي المحدث للصورة
+                const base64DataOnly = fullBase64.split(',')[1]; 
                 
                 statusDiv.innerText = "جاري إرسال اللقطة والتحليل بالذكاء الاصطناعي (Gemini)...";
                 await analyzeImageWithGemini(base64DataOnly, apiKey);
                 
             } catch (error) { 
-                statusDiv.innerText = "حدث خطأ أثناء التقاط الصورة من الكاميرا."; 
+                statusDiv.innerText = "حدث خطأ أثناء التقاط الصورة."; 
                 console.error(error);
             }
         });
 
-        // 3. دالة الإرسال والتحليل الذكي
         async function analyzeImageWithGemini(base64Data, apiKey) {
             const url = `https://googleapis.com{apiKey}`;
             
@@ -167,7 +161,7 @@
                 const data = await response.json();
                 
                 if (data.error) {
-                    statusDiv.innerText = `خطأ من خوادم جوجل: ${data.error.message}.`;
+                    statusDiv.innerText = `خطأ من خوادم جوجل: ${data.error.message}`;
                     return;
                 }
                 
@@ -187,7 +181,6 @@
             }
         }
 
-        // 4. حفظ البيانات بالقائمة
         document.getElementById('save-btn').addEventListener('click', () => {
             const type = document.getElementById('device-type').value;
             const brand = document.getElementById('device-brand').value;
@@ -211,7 +204,6 @@
             ['device-type', 'device-brand', 'device-model', 'device-serial'].forEach(id => document.getElementById(id).value = '');
         });
 
-        // 5. التصدير لملف Excel
         document.getElementById('export-btn').addEventListener('click', () => {
             if(inventoryList.length === 0) {
                 alert("لا توجد بيانات مسجلة لتصديرها!");
