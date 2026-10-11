@@ -9,7 +9,7 @@
         body { font-family: system-ui, -apple-system, sans-serif; background: #f4f7f6; margin: 0; padding: 15px; text-align: center; color: #333; }
         .container { max-width: 500px; margin: 0 auto; }
         h1 { font-size: 20px; color: #2c3e50; margin: 10px 0 20px 0; }
-        .camera-container { width: 100%; height: 260px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .camera-container { width: 100%; height: 280px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         video { width: 100%; height: 100%; object-fit: cover; display: block; }
         button { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
         #capture-btn { background-color: #28a745; }
@@ -95,17 +95,24 @@
 
         function startCamera() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                    .then(stream => {
-                        video.srcObject = stream;
-                        if(localStorage.getItem('gemini_key')) {
-                            statusDiv.innerText = "جاهز للمسح... وجه الكاميرا واضغط التقاط.";
-                        }
-                    })
-                    .catch(err => {
-                        statusDiv.innerText = "خطأ: الكاميرا متوقفة. تأكد من فتح الرابط في متصفح متخفي ومنح الصلاحية.";
-                        console.error(err);
-                    });
+                // إعدادات محسنة لضمان تشغيل وضوح عالي للكاميرا الخلفية تلقائياً ومنع الشاشة السوداء
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    } 
+                })
+                .then(stream => {
+                    video.srcObject = stream;
+                    if(localStorage.getItem('gemini_key')) {
+                        statusDiv.innerText = "جاهز للمسح... وجه الكاميرا واضغط التقاط.";
+                    }
+                })
+                .catch(err => {
+                    statusDiv.innerText = "خطأ: الكاميرا متوقفة. تأكد من منح الصلاحية وفتح الرابط في متصفح متخفي.";
+                    console.error(err);
+                });
             } else {
                 statusDiv.innerText = "المتصفح لا يدعم الكاميرا.";
             }
@@ -123,12 +130,14 @@
             statusDiv.innerText = "جاري التقاط الصورة وتجهيزها...";
             try {
                 const context = canvas.getContext('2d');
-                canvas.width = video.videoWidth || 640;
-                canvas.height = video.videoHeight || 480;
+                canvas.width = video.videoWidth || 1280;
+                canvas.height = video.videoHeight || 720;
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                const fullBase64 = canvas.toDataURL('image/jpeg');
-                const base64DataOnly = fullBase64.split(',')[1]; 
+                const fullBase64 = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // تنظيف صيغة الصورة البرمجية وعزل النص التمهيدي (الـ Header الزائد) لتقبله جوجل فوراً
+                const base64DataOnly = fullBase64.substring(fullBase64.indexOf(',') + 1); 
                 
                 statusDiv.innerText = "جاري إرسال اللقطة والتحليل بالذكاء الاصطناعي (Gemini)...";
                 await analyzeImageWithGemini(base64DataOnly, apiKey);
