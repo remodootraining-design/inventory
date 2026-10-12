@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام جرد الأجهزة الذكي الخارق</title>
-    <!-- مكتبة تصدير Excel فائق الاستقرار سحابياً -->
+    <title>نظام جرد الأجهزة الاحترافي</title>
+    <!-- مكتبة تصدير تقارير Excel فائق الاستقرار سحابياً -->
     <script src="https://cloudflare.com"></script>
     <style>
         :root { --primary: #0f172a; --success: #16a34a; --info: #2563eb; --warning: #eab308; --bg: #f8fafc; }
@@ -69,7 +69,7 @@
             if (userKey !== null && userKey.trim() !== "") {
                 localStorage.setItem('gemini_key', userKey.trim());
                 updateBadgeStatus(true);
-                statusDiv.innerText = "تم حفظ المفتاح! وجه الكاميرا واضغط التقاط.";
+                statusDiv.innerText = "تم حفظ المفتاح بنجاح! جاهز للجرد.";
             } else if (!localStorage.getItem('gemini_key')) {
                 updateBadgeStatus(false);
                 statusDiv.innerText = "⚠️ تنبيه: يرجى إدخال المفتاح لتشغيل الذكاء الاصطناعي.";
@@ -103,7 +103,7 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            statusDiv.innerText = "📸 جاري قراءة اللقطة وتكبير الخطوط برمجياً...";
+            statusDiv.innerText = "📸 جاري قراءة اللقطة وتكبير الخطوط برمجياً ورفع التباين...";
             
             outputImage.src = URL.createObjectURL(file);
             outputImage.style.display = "block";
@@ -116,7 +116,7 @@
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     
-                    const maxDim = 1600;
+                    const maxDim = 1280;
                     let width = img.width;
                     let height = img.height;
                     
@@ -134,10 +134,10 @@
                     ctx.filter = "contrast(1.4) brightness(1.05)";
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.95);
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.90);
                     const base64DataOnly = compressedBase64.substring(compressedBase64.indexOf(',') + 1);
                     
-                    statusDiv.innerText = "🤖 محرك (Gemini 1.5 Pro) يحلل الصورة ويسحب البيانات الآن تلقائياً...";
+                    statusDiv.innerText = "🤖 محرك (Gemini 1.5 Flash) المستقر يفك الرموز ويسحب الداتا تلقائياً...";
                     sendToGemini(base64DataOnly, apiKey);
                 };
                 img.src = reader.result;
@@ -148,7 +148,7 @@
         async function sendToGemini(base64Data, apiKey) {
             const url = `https://googleapis.com{apiKey}`;
             
-            const promptInstruction = "اقرأ هذا الملصق بدقة شديدة واستخرج البيانات. يجب أن تعيد النتيجة بصيغة JSON نظيفة حصراً ومباشرة بدون علامات الاقتباس المائلة وبدون أي نصوص تمهيدية، فقط أرسل الكائن التالي: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم تجد حقلاً اتركه فارغاً كلياً ولا تخترع بيانات.";
+            const promptInstruction = "اقرأ هذا الملصق بدقة شديدة واستخرج البيانات. يجب أن تعيد النتيجة بصيغة JSON نظيفة وصافية حصراً ومباشرة بدون علامات الاقتباس المائلة وبدون أي نصوص تمهيدية أو كلمات إضافية، فقط أرسل الكائن التالي: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم تجد حقلاً اتركه فارغاً كلياً ولا تخترع بيانات.";
 
             const requestBody = {
                 contents: [{
@@ -187,7 +187,7 @@
                 
                 statusDiv.innerText = "💥 تم قراءة وسحب البيانات تلقائياً بنجاح باهر! اضغط حفظ القائمة.";
             } catch (e) {
-                statusDiv.innerText = "فشل الذكاء الاصطناعي في فك رموز الصورة. تأكد من وضوح الملصق وثبات الكاميرا وأعد المحاولة.";
+                statusDiv.innerText = "فشل التعرف على النصوص. تأكد من ثبات الكاميرا ووضوح إضاءة الملصق وأعد المحاولة.";
                 console.error(e);
             }
         }
