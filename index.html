@@ -3,12 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام جرد الأجهزة الاحترافي التلقائي</title>
-    
-    <!-- استدعاء مكتبة المسح الضوئي الفوري ومكتبة الإكسل بأعلى استقرار -->
+    <title>نظام جرد الأجهزة الاحترافي</title>
+    <!-- مكتبة Excel خفيفة ومستقرة تماماً -->
     <script src="https://cloudflare.com"></script>
-    <script src="https://cloudflare.com"></script>
-
     <style>
         :root {
             --primary: #2c3e50;
@@ -20,165 +17,181 @@
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; text-align: center; color: #333; }
         .container { max-width: 500px; margin: 0 auto; }
         h1 { font-size: 20px; color: var(--primary); margin: 10px 0 20px 0; font-weight: 700; }
-        
-        /* مربع الكاميرا المباشر والمستقر */
-        .camera-box { width: 100%; border-radius: 16px; background: #000; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 2px solid #fff; margin-bottom: 15px; position: relative; }
-        #reader { width: 100%; background: black; }
-        
-        button { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; color: white; cursor: pointer; margin-bottom: 10px; transition: background 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); -webkit-tap-highlight-color: transparent; }
+        .camera-container { width: 100%; height: 260px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        button { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
+        #capture-btn { background-color: var(--success); }
         #export-btn { background-color: var(--info); }
         #save-btn { background-color: var(--warning); color: #212529; margin-top: 15px; }
-        button:active { opacity: 0.9; }
-        
-        .status { font-weight: 600; padding: 14px; background: #fff; border-radius: 12px; font-size: 14px; margin: 15px 0; border: 1px solid #e2e8f0; color: var(--primary); }
-        .result-card { background: white; padding: 22px; border-radius: 16px; text-align: right; box-shadow: 0 10px 25px rgba(0,0,0,0.04); margin-bottom: 30px; border: 1px solid #e2e8f0; }
-        .result-card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: var(--primary); font-size: 17px; }
-        .result-card label { display: block; margin-top: 14px; font-weight: 700; font-size: 13px; color: #4a5568; }
-        .result-card input { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; background: #f8fafc; }
-        .result-card input:focus { border-color: var(--info); background: #fff; outline: none; }
+        button:active { opacity: 0.8; }
+        .status { font-weight: bold; padding: 12px; background: #e9ecef; border-radius: 8px; font-size: 14px; margin: 15px 0; border: 1px solid #ced4da; color: var(--primary); }
+        .result-card { background: white; padding: 20px; border-radius: 12px; text-align: right; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .result-card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 8px; color: var(--primary); }
+        .result-card label { display: block; margin-top: 12px; font-weight: bold; font-size: 14px; color: #495057; }
+        .result-card input { width: 100%; padding: 11px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        .key-badge { display: inline-block; padding: 5px 10px; font-size: 11px; background: #28a745; color: white; border-radius: 20px; margin-bottom: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>نظام جرد الأجهزة الذكي المباشر ⚡</h1>
+        <h1>نظام جرد الأجهزة الذكي ⚡</h1>
         
-        <!-- نافذة البث المباشر للكاميرا -->
-        <div class="camera-box">
-            <div id="reader"></div>
+        <div class="key-badge" id="key-status" onclick="askForKey()">🔑 إعدادات المفتاح (اضغط للتعديل)</div>
+
+        <div class="camera-container">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="snapshot" style="display:none;"></canvas>
         </div>
         
         <div class="controls">
-            <button id="export-btn">📊 تحميل تقرير Excel</button>
+            <button id="capture-btn">التقاط وتحليل الملصق فوراً</button>
+            <button id="export-btn">تحميل ملف Excel</button>
         </div>
         
-        <div id="status" class="status">جاري تشغيل الكاميرا المباشرة... برجاء منح الصلاحية</div>
+        <div id="status" class="status">جاهز للمسح... وجه الكاميرا واضغط الزر الأخضر.</div>
         
         <div class="result-card">
-            <h3>📋 البيانات المسحوبة تلقائياً:</h3>
-            <label>نوع الجهاز:</label><input type="text" id="device-type" placeholder="حاسوب محمول، شاشة، طابعة...">
-            <label>الشركة المصنعة:</label><input type="text" id="device-brand" placeholder="Dell, HP, Lenovo...">
-            <label>الموديل (Model):</label><input type="text" id="device-model" placeholder="رقم الموديل المستخرج">
-            <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial" placeholder="الرقم التسلسلي المسحوب">
-            <button id="save-btn">💾 تأكيد وحفظ الجهاز في القائمة</button>
+            <h3>📋 البيانات المسجلة تلقائياً:</h3>
+            <label>نوع الجهاز:</label><input type="text" id="device-type" placeholder="حاسوب محمول، شاشة...">
+            <label>الشركة المصنعة:</label><input type="text" id="device-brand" placeholder="Dell, HP...">
+            <label>الموديل (Model):</label><input type="text" id="device-model" placeholder="رقم الموديل">
+            <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial" placeholder="الرقم التسلسلي">
+            <button id="save-btn">تأكيد وحفظ في القائمة</button>
         </div>
     </div>
     <script>
         let inventoryList = [];
-        let html5QrcodeScanner = null;
-        
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('snapshot');
         const statusDiv = document.getElementById('status');
+        const keyStatusObj = document.getElementById('key-status');
 
-        // 1. تشغيل ماسح الكاميرا المباشر فور فتح الصفحة تلقائياً داخل الواجهة
+        function askForKey() {
+            const currentKey = localStorage.getItem('gemini_key') || "";
+            const userKey = prompt("الرجاء لصق مفتاح Gemini API الجديد الخاص بك هنا:", currentKey);
+            if (userKey !== null && userKey.trim() !== "") {
+                localStorage.setItem('gemini_key', userKey.trim());
+                updateBadgeStatus(true);
+                statusDiv.innerText = "تم حفظ المفتاح بنجاح! وجه الكاميرا واضغط التقاط.";
+            } else if (!localStorage.getItem('gemini_key')) {
+                updateBadgeStatus(false);
+                statusDiv.innerText = "⚠️ تنبيه: يرجى إدخال المفتاح لتشغيل الذكاء الاصطناعي.";
+            }
+        }
+
+        function updateBadgeStatus(isActive) {
+            if(isActive) {
+                keyStatusObj.innerText = "✅ مفتاح الـ API محفوظ ونشط (اضغط للتعديل)";
+                keyStatusObj.style.background = "#28a745";
+            } else {
+                keyStatusObj.innerText = "❌ لم يتم إدخال مفتاح الـ API (اضغط هنا لإدخاله)";
+                keyStatusObj.style.background = "#dc3545";
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
-            startLiveScanner();
+            const savedKey = localStorage.getItem('gemini_key');
+            if (savedKey && savedKey.trim() !== "") {
+                updateBadgeStatus(true);
+            } else {
+                updateBadgeStatus(false);
+                setTimeout(askForKey, 800);
+            }
+            startCamera();
         });
 
-        function startLiveScanner() {
-            statusDiv.innerText = "جاري تشغيل الكاميرا المباشرة داخل الصفحة...";
-            
-            // إعداد محرك المسح الضوئي الفوري لقراءة الباركود بجميع أنواعه
-            html5QrcodeScanner = new Html5Qrcode("reader");
-            
-            const config = { 
-                fps: 20, 
-                qrbox: function(width, height) {
-                    // تحديد إطار قراءة مرن ومناسب لملصقات الأجهزة
-                    return { width: Math.floor(width * 0.8), height: Math.floor(height * 0.5) };
-                },
-                aspectRatio: 1.333334
+        function startCamera() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } } 
+                })
+                .then(stream => {
+                    video.srcObject = stream;
+                    statusDiv.innerText = "جاهز للمسح... وجه الكاميرا نحو الملصق واضغط التقاط.";
+                })
+                .catch(err => {
+                    statusDiv.innerText = "خطأ في تشغيل الكاميرا. تأكد من منح الصلاحية.";
+                });
+            }
+        }
+
+        // التقاط الصورة ومعالجتها بصيغة ثنائية آمنة تكسر حظر المتصفحات
+        document.getElementById('capture-btn').addEventListener('click', () => {
+            const apiKey = localStorage.getItem('gemini_key');
+            if (!apiKey) return askForKey();
+
+            statusDiv.innerText = "جاري التقاط الصورة الفورية...";
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // تحويل اللقطة إلى ملف باينري صافي (Blob) متوافق أمنياً مع خوادم جوجل
+            canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = async () => {
+                    const fullBase64 = reader.result;
+                    const base64Data = fullBase64.substring(fullBase64.indexOf(',') + 1);
+                    statusDiv.innerText = "جاري الفرز والتحليل عبر الذكاء الاصطناعي...";
+                    await sendToGemini(base64Data, apiKey);
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/jpeg', 0.7);
+        });
+
+        async function sendToGemini(base64Data, apiKey) {
+            const url = `https://googleapis.com{apiKey}`;
+            const requestBody = {
+                contents: [{
+                    parts: [
+                        { text: "اقرأ هذا الملصق بدقة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي نصوص إضافية أو علامات مائلة: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم يتوفر حقل اتركه فارغاً." },
+                        { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                    ]
+                }]
             };
 
-            // تشغيل الكاميرا الخلفية مباشرة دون فتح أي تطبيق خارجي
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, 
-                config, 
-                onScanSuccess, 
-                onScanFailure
-            )
-            .then(() => {
-                statusDiv.innerText = "⚡ الكاميرا المباشرة تعمل الآن! وجهها نحو باركود الجهاز أو الرقم التسلسلي وسيتم سحبه تلقائياً.";
-            })
-            .catch(err => {
-                statusDiv.innerText = "تنبيه: يرجى فتح الرابط بمتصفح Chrome عادي (وليس علامة تبويب مخفية) للتأكد من تفعيل صلاحية الكاميرا المباشرة.";
-                console.error(err);
-            });
-        }
+            try {
+                const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+                const data = await response.json();
+                
+                if (data.error) {
+                    statusDiv.innerText = `خطأ من خوادم جوجل: ${data.error.message}`;
+                    return;
+                }
 
-        // 2. دالة النجاح: تُنفذ تلقائياً في نفس الجزء من الثانية عند رصد البيانات دون الحاجة لضغط أزرار
-        function onScanSuccess(decodedText, decodedResult) {
-            statusDiv.innerText = "✨ تم رصد وقراءة البيانات بنجاح!";
-            
-            // تنظيف النص المسحوب وتحويله لحروف كبيرة
-            const cleanedText = decodedText.trim().toUpperCase();
-            document.getElementById('device-serial').value = cleanedText;
+                let aiText = data.candidates[0].content.parts[0].text;
+                aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                const deviceJSON = JSON.parse(aiText);
 
-            // تحليل وقراءة ذكية ونظيفة لتخمين الشركة والنوع بناءً على الرمز المسحوب
-            let guessedBrand = "تلقائي";
-            let guessedType = "جهاز إلكتروني";
-
-            if (cleanedText.includes("DELL") || cleanedText.startsWith("CN0") || cleanedText.length === 7) {
-                guessedBrand = "DELL";
-                guessedType = "حاسوب محمول";
-            } else if (cleanedText.includes("HP") || cleanedText.includes("CNB") || cleanedText.includes("CND")) {
-                guessedBrand = "HP";
-                guessedType = "حاسوب محمول/طابعة";
-            } else if (cleanedText.includes("LENOVO") || cleanedText.startsWith("1S")) {
-                guessedBrand = "LENOVO";
-                guessedType = "حاسوب محمول";
-            } else if (cleanedText.includes("APPL") || cleanedText.length === 12) {
-                guessedBrand = "APPLE";
-                guessedType = "حاسوب محمول/آيباد";
+                document.getElementById('device-type').value = deviceJSON.type || '';
+                document.getElementById('device-brand').value = deviceJSON.brand || '';
+                document.getElementById('device-model').value = deviceJSON.model || '';
+                document.getElementById('device-serial').value = deviceJSON.serial || '';
+                statusDiv.innerText = "تم التحليل بنجاح! راجع البيانات ثم اضغط حفظ.";
+            } catch (e) {
+                statusDiv.innerText = "فشل التحليل. يرجى تقريب الكاميرا وإضاءة الملصق بشكل جيد والمحاولة مجدداً.";
+                console.error(e);
             }
-
-            document.getElementById('device-brand').value = guessedBrand;
-            document.getElementById('device-type').value = guessedType;
-            
-            // وضع الرمز كقيمة مبدئية للموديل ليقوم الموظف بمراجعته أو تعديله
-            document.getElementById('device-model').value = "راجع الملصق";
-            
-            // إحداث اهتزاز خفيف في الجوال لإعلام الموظف بنجاح السحب
-            if (navigator.vibrate) { navigator.vibrate(100); }
         }
 
-        function onScanFailure(error) {
-            // يتم تجاهل الأخطاء المستمرة أثناء البحث لضمان عدم توقف الكاميرا
-        }
-
-        // 3. حفظ البيانات في قائمة الجرد وتفريغ الخانات
         document.getElementById('save-btn').addEventListener('click', () => {
-            const type = document.getElementById('device-type').value;
-            const brand = document.getElementById('device-brand').value;
-            const model = document.getElementById('device-model').value;
-            const serial = document.getElementById('device-serial').value;
-
-            if(!type && !brand && !model && !serial) {
-                alert("برجاء تعبئة خانة واحدة على الأقل قبل الحفظ!");
-                return;
-            }
-
             inventoryList.push({
-                "نوع الجهاز": type,
-                "الشركة المصنعة": brand,
-                "الموديل": model,
-                "الرقم التسلسلي": serial,
-                "تاريخ وقت الجرد": new Date().toLocaleString('ar-EG')
+                "نوع الجهاز": document.getElementById('device-type').value,
+                "الشركة المصنعة": document.getElementById('device-brand').value,
+                "الموديل": document.getElementById('device-model').value,
+                "الرقم التسلسلي": document.getElementById('device-serial').value,
+                "تاريخ الجرد": new Date().toLocaleDateString('ar-EG')
             });
-            
-            statusDiv.innerText = `✅ تم الحفظ بنجاح! إجمالي الأجهزة المسجلة حالياً: ${inventoryList.length}`;
+            statusDiv.innerText = `تم الحفظ! إجمالي الأجهزة: ${inventoryList.length}`;
             ['device-type', 'device-brand', 'device-model', 'device-serial'].forEach(id => document.getElementById(id).value = '');
         });
 
-        // 4. تصدير قائمة الجرد كاملة إلى ملف Excel وتحميله فوراً على الهاتف
         document.getElementById('export-btn').addEventListener('click', () => {
-            if(inventoryList.length === 0) {
-                alert("لا توجد أجهزة مسجلة في القائمة حالياً لتصديرها!");
-                return;
-            }
+            if(inventoryList.length === 0) return alert("لا توجد بيانات!");
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "تقرير الجرد");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
             XLSX.writeFile(workbook, `جرد_الأجهزة_${new Date().toISOString().slice(0,10)}.xlsx`);
-            statusDiv.innerText = "📊 تم تحميل ملف Excel بنجاح!";
         });
     </script>
 </body>
