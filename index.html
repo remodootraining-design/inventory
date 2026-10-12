@@ -58,9 +58,8 @@
             <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial" placeholder="الرقم التسلسلي">
             <button id="save-btn">تأكيد وحفظ في القائمة</button>
         </div>
-    </div></body>
-
-        <script>
+    </div>
+    <script>
         let inventoryList = [];
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('snapshot');
@@ -116,8 +115,7 @@
             }
         }
 
-        // عملية التقاط البيانات المضمونة والمزامنة بالكامل لمنع إرسال ملفات فارغة
-        document.getElementById('capture-btn').addEventListener('click', async () => {
+        document.getElementById('capture-btn').addEventListener('click', () => {
             const apiKey = localStorage.getItem('gemini_key');
             if (!apiKey) return askForKey();
 
@@ -128,14 +126,11 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             try {
-                // التقاط فوري ومباشر ومضمون للصورة كـ Base64 خفيف ومكتمل 100% في نفس الملي ثانية
                 const fullBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                
-                // عزل رأس الملف للحصول على البيانات الصافية التي تنتظرها خوادم جوجل
                 const base64DataOnly = fullBase64.substring(fullBase64.indexOf(',') + 1);
                 
                 statusDiv.innerText = "🤖 جاري فك تشفير اللقطة وسحب الداتا عبر الذكاء الاصطناعي...";
-                await sendToGemini(base64DataOnly, apiKey);
+                sendToGemini(base64DataOnly, apiKey);
             } catch (err) {
                 statusDiv.innerText = "خطأ في معالجة لقطة البيانات محلياً.";
                 console.error(err);
@@ -162,7 +157,7 @@
                     return;
                 }
 
-                let aiText = data.candidates[0].content.parts[0].text;
+                let aiText = data.candidates.content.parts.text;
                 aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
                 const deviceJSON = JSON.parse(aiText);
 
@@ -192,12 +187,10 @@
         document.getElementById('export-btn').addEventListener('click', () => {
             if(inventoryList.length === 0) return alert("لا توجد بيانات!");
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
-            const workbook = \$.XLSX.utils.book_new();
+            const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
             XLSX.writeFile(workbook, `جرد_الأجهزة_${new Date().toISOString().slice(0,10)}.xlsx`);
         });
     </script>
 </body>
-</html>
-
 </html>
