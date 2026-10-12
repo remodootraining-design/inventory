@@ -58,8 +58,9 @@
             <label>الرقم التسلسلي (S/N):</label><input type="text" id="device-serial" placeholder="الرقم التسلسلي">
             <button id="save-btn">تأكيد وحفظ في القائمة</button>
         </div>
-    </div>
-    <script>
+    </div></body>
+
+        <script>
         let inventoryList = [];
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('snapshot');
@@ -115,28 +116,30 @@
             }
         }
 
-        // التقاط الصورة ومعالجتها بصيغة ثنائية آمنة تكسر حظر المتصفحات
-        document.getElementById('capture-btn').addEventListener('click', () => {
+        // عملية التقاط البيانات المضمونة والمزامنة بالكامل لمنع إرسال ملفات فارغة
+        document.getElementById('capture-btn').addEventListener('click', async () => {
             const apiKey = localStorage.getItem('gemini_key');
             if (!apiKey) return askForKey();
 
-            statusDiv.innerText = "جاري التقاط الصورة الفورية...";
+            statusDiv.innerText = "📸 جاري التقاط وتجميد الصورة برمجياً...";
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 480;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // تحويل اللقطة إلى ملف باينري صافي (Blob) متوافق أمنياً مع خوادم جوجل
-            canvas.toBlob((blob) => {
-                const reader = new FileReader();
-                reader.onloadend = async () => {
-                    const fullBase64 = reader.result;
-                    const base64Data = fullBase64.substring(fullBase64.indexOf(',') + 1);
-                    statusDiv.innerText = "جاري الفرز والتحليل عبر الذكاء الاصطناعي...";
-                    await sendToGemini(base64Data, apiKey);
-                };
-                reader.readAsDataURL(blob);
-            }, 'image/jpeg', 0.7);
+            try {
+                // التقاط فوري ومباشر ومضمون للصورة كـ Base64 خفيف ومكتمل 100% في نفس الملي ثانية
+                const fullBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                
+                // عزل رأس الملف للحصول على البيانات الصافية التي تنتظرها خوادم جوجل
+                const base64DataOnly = fullBase64.substring(fullBase64.indexOf(',') + 1);
+                
+                statusDiv.innerText = "🤖 جاري فك تشفير اللقطة وسحب الداتا عبر الذكاء الاصطناعي...";
+                await sendToGemini(base64DataOnly, apiKey);
+            } catch (err) {
+                statusDiv.innerText = "خطأ في معالجة لقطة البيانات محلياً.";
+                console.error(err);
+            }
         });
 
         async function sendToGemini(base64Data, apiKey) {
@@ -144,7 +147,7 @@
             const requestBody = {
                 contents: [{
                     parts: [
-                        { text: "اقرأ هذا الملصق بدقة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي نصوص إضافية أو علامات مائلة: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم يتوفر حقل اتركه فارغاً." },
+                        { text: "اقرأ هذا الملصق بدقة شديدة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي نصوص تمهيدية أو علامات مائلة: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم يتوفر حقل اتركه فارغاً." },
                         { inlineData: { mimeType: "image/jpeg", data: base64Data } }
                     ]
                 }]
@@ -155,7 +158,7 @@
                 const data = await response.json();
                 
                 if (data.error) {
-                    statusDiv.innerText = `خطأ من خوادم جوجل: ${data.error.message}`;
+                    statusDiv.innerText = `خطأ في صلاحيات المفتاح: ${data.error.message}`;
                     return;
                 }
 
@@ -167,9 +170,9 @@
                 document.getElementById('device-brand').value = deviceJSON.brand || '';
                 document.getElementById('device-model').value = deviceJSON.model || '';
                 document.getElementById('device-serial').value = deviceJSON.serial || '';
-                statusDiv.innerText = "تم التحليل بنجاح! راجع البيانات ثم اضغط حفظ.";
+                statusDiv.innerText = "✨ تم لقط وسحب البيانات بنجاح! راجعها ثم اضغط حفظ.";
             } catch (e) {
-                statusDiv.innerText = "فشل التحليل. يرجى تقريب الكاميرا وإضاءة الملصق بشكل جيد والمحاولة مجدداً.";
+                statusDiv.innerText = "فشل السيرفر في التعرف على النصوص. تأكد من وضوح إضاءة الملصق وجرب مجدداً.";
                 console.error(e);
             }
         }
@@ -189,10 +192,12 @@
         document.getElementById('export-btn').addEventListener('click', () => {
             if(inventoryList.length === 0) return alert("لا توجد بيانات!");
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
-            const workbook = XLSX.utils.book_new();
+            const workbook = \$.XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
             XLSX.writeFile(workbook, `جرد_الأجهزة_${new Date().toISOString().slice(0,10)}.xlsx`);
         });
     </script>
 </body>
+</html>
+
 </html>
