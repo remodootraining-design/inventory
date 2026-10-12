@@ -4,43 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام جرد الأجهزة الاحترافي</title>
-    <!-- مكتبة Excel خفيفة ومستقرة تماماً -->
+    <!-- استدعاء مكتبة الجرد وتصدير الإكسل بأعلى استقرار سحابي -->
     <script src="https://cloudflare.com"></script>
     <style>
         :root {
-            --primary: #2c3e50;
-            --success: #28a745;
-            --info: #007bff;
-            --warning: #ffc107;
+            --primary: #1e293b;
+            --success: #16a34a;
+            --info: #2563eb;
+            --warning: #eab308;
             --bg: #f8fafc;
         }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; text-align: center; color: #333; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; text-align: center; color: #334155; }
         .container { max-width: 500px; margin: 0 auto; }
-        h1 { font-size: 20px; color: var(--primary); margin: 10px 0 20px 0; font-weight: 700; }
-        .camera-container { width: 100%; height: 260px; overflow: hidden; border-radius: 12px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        h1 { font-size: 22px; color: var(--primary); margin: 10px 0 20px 0; font-weight: 800; }
+        .camera-container { width: 100%; height: 280px; overflow: hidden; border-radius: 16px; background: #000; margin-bottom: 15px; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border: 2px solid #fff; }
         video { width: 100%; height: 100%; object-fit: cover; display: block; }
-        button { width: 100%; padding: 14px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; margin-bottom: 10px; -webkit-tap-highlight-color: transparent; }
+        .focus-overlay { position: absolute; top: 15%; left: 8%; right: 8%; bottom: 15%; border: 2px dashed rgba(255,255,255,0.7); border-radius: 12px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4); }
+        .focus-text { position: absolute; bottom: 10px; left: 0; right: 0; color: #fff; font-size: 12px; font-weight: bold; background: rgba(0,0,0,0.6); padding: 5px; }
+        button { width: 100%; padding: 15px; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; color: white; cursor: pointer; margin-bottom: 10px; transition: transform 0.1s, opacity 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); -webkit-tap-highlight-color: transparent; }
+        button:active { transform: scale(0.98); opacity: 0.9; }
         #capture-btn { background-color: var(--success); }
         #export-btn { background-color: var(--info); }
-        #save-btn { background-color: var(--warning); color: #212529; margin-top: 15px; }
-        button:active { opacity: 0.8; }
-        .status { font-weight: bold; padding: 12px; background: #e9ecef; border-radius: 8px; font-size: 14px; margin: 15px 0; border: 1px solid #ced4da; color: var(--primary); }
-        .result-card { background: white; padding: 20px; border-radius: 12px; text-align: right; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #e2e8f0; }
-        .result-card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 8px; color: var(--primary); }
-        .result-card label { display: block; margin-top: 12px; font-weight: bold; font-size: 14px; color: #495057; }
-        .result-card input { width: 100%; padding: 11px; margin-top: 6px; border: 1px solid #ced4da; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
-        .key-badge { display: inline-block; padding: 5px 10px; font-size: 11px; background: #28a745; color: white; border-radius: 20px; margin-bottom: 10px; cursor: pointer; }
+        #save-btn { background-color: var(--warning); color: #1e293b; margin-top: 15px; }
+        .status { font-weight: 700; padding: 14px; background: #fff; border-radius: 12px; font-size: 14px; margin: 15px 0; border: 1px solid #e2e8f0; color: var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .result-card { background: white; padding: 22px; border-radius: 16px; text-align: right; box-shadow: 0 10px 20px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .result-card h3 { margin-top: 0; border-bottom: 2px solid var(--bg); padding-bottom: 10px; color: var(--primary); font-size: 18px; }
+        .result-card label { display: block; margin-top: 14px; font-weight: 700; font-size: 13px; color: #475569; }
+        .result-card input { width: 100%; padding: 12px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 15px; background: #f8fafc; transition: border-color 0.2s; }
+        .result-card input:focus { border-color: var(--info); background: #fff; outline: none; }
+        .key-badge { display: inline-block; padding: 6px 12px; font-size: 12px; font-weight: bold; background: var(--success); color: white; border-radius: 20px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>نظام جرد الأجهزة الذكي ⚡</h1>
+        <h1>نظام جرد الأجهزة الذكي قاهر الأخطاء ⚡</h1>
         
         <div class="key-badge" id="key-status" onclick="askForKey()">🔑 إعدادات المفتاح (اضغط للتعديل)</div>
 
         <div class="camera-container">
             <video id="webcam" autoplay playsinline muted></video>
             <canvas id="snapshot" style="display:none;"></canvas>
+            <div class="focus-overlay">
+                <div class="focus-text">ضع ملصق المواصفات بوضوح داخل هذا الإطار</div>
+            </div>
         </div>
         
         <div class="controls">
@@ -82,7 +88,7 @@
         function updateBadgeStatus(isActive) {
             if(isActive) {
                 keyStatusObj.innerText = "✅ مفتاح الـ API محفوظ ونشط (اضغط للتعديل)";
-                keyStatusObj.style.background = "#28a745";
+                keyStatusObj.style.background = "#16a34a";
             } else {
                 keyStatusObj.innerText = "❌ لم يتم إدخال مفتاح الـ API (اضغط هنا لإدخاله)";
                 keyStatusObj.style.background = "#dc3545";
@@ -103,7 +109,7 @@
         function startCamera() {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } } 
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
                 })
                 .then(stream => {
                     video.srcObject = stream;
@@ -119,17 +125,20 @@
             const apiKey = localStorage.getItem('gemini_key');
             if (!apiKey) return askForKey();
 
-            statusDiv.innerText = "📸 جاري التقاط وتجميد الصورة برمجياً...";
+            statusDiv.innerText = "📸 جاري التقاط الصورة وتجميد الداتا برمجياً بأعلى وضوح...";
             const context = canvas.getContext('2d');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 480;
+            
+            // مطابقة أبعاد لوحة الرسم الخلفية بدقة الكاميرا العالية لمنع بهتان الحروف
+            canvas.width = video.videoWidth || 1280;
+            canvas.height = video.videoHeight || 720;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
             try {
-                const fullBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                // ضغط الصورة بجودة عالية جداً (0.95) لعزل الكلمات والأرقام الصغيرة بوضوح
+                const fullBase64 = canvas.toDataURL('image/jpeg', 0.95);
                 const base64DataOnly = fullBase64.substring(fullBase64.indexOf(',') + 1);
                 
-                statusDiv.innerText = "🤖 جاري فك تشفير اللقطة وسحب الداتا عبر الذكاء الاصطناعي...";
+                statusDiv.innerText = "🤖 جاري فك تشفير اللقطة والتحليل الفوري عبر الذكاء الاصطناعي...";
                 sendToGemini(base64DataOnly, apiKey);
             } catch (err) {
                 statusDiv.innerText = "خطأ في معالجة لقطة البيانات محلياً.";
@@ -139,10 +148,14 @@
 
         async function sendToGemini(base64Data, apiKey) {
             const url = `https://googleapis.com{apiKey}`;
+            
+            // توجيه عسكري صارم يجبر الخادم على إرسال JSON صافي وخالٍ من الهوامش والتبريرات النصية
+            const promptInstruction = "اقرأ هذا الملصق بدقة شديدة وعزل الحروف. يجب أن تعيد النتيجة بصيغة JSON نظيفة وصافية حصراً ومباشرة بدون علامات الاقتباس المائلة أو نصوص تمهيدية، فقط أرسل الكائن التالي: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم تجد حقلاً اتركه فارغاً ولا تخترع بيانات.";
+
             const requestBody = {
                 contents: [{
                     parts: [
-                        { text: "اقرأ هذا الملصق بدقة شديدة واستخرج البيانات التالية بصيغة JSON حصراً وبدون أي نصوص تمهيدية أو علامات مائلة: {\"type\": \"نوع الجهاز باللغة العربية مثل حاسوب محمول، شاشة\" , \"brand\": \"اسم الشركة مثل Dell, HP\", \"model\": \"رقم الموديل بدقة من الملصق\", \"serial\": \"الرقم التسلسلي بدقة S/N\"}. إذا لم يتوفر حقل اتركه فارغاً." },
+                        { text: promptInstruction },
                         { inlineData: { mimeType: "image/jpeg", data: base64Data } }
                     ]
                 }]
@@ -157,17 +170,27 @@
                     return;
                 }
 
-                let aiText = data.candidates.content.parts.text;
-                aiText = aiText.replace(/```json/g, "").replace(/```/g, "").trim();
+                let aiText = data.candidates[0].content.parts[0].text;
+                
+                // فلتر الفرز النهائي والتنظيف التام لأي هوامش برمجية زائدة
+                aiText = aiText.replace(/```json/g, "").replace(/```/g, "").replace(/\\n/g, "").trim();
+                
+                // كسر الحدود: البحث التلقائي عن الأقواس وعزل كائن الـ JSON غصباً عن أي نصوص تفسيرية
+                const startIdx = aiText.indexOf('{');
+                const endIdx = aiText.lastIndexOf('}');
+                if (startIdx !== -1 && endIdx !== -1) {
+                    aiText = aiText.substring(startIdx, endIdx + 1);
+                }
+
                 const deviceJSON = JSON.parse(aiText);
 
                 document.getElementById('device-type').value = deviceJSON.type || '';
                 document.getElementById('device-brand').value = deviceJSON.brand || '';
                 document.getElementById('device-model').value = deviceJSON.model || '';
                 document.getElementById('device-serial').value = deviceJSON.serial || '';
-                statusDiv.innerText = "✨ تم لقط وسحب البيانات بنجاح! راجعها ثم اضغط حفظ.";
+                statusDiv.innerText = "✨ تم سحب ولقط البيانات بنجاح تام!";
             } catch (e) {
-                statusDiv.innerText = "فشل السيرفر في التعرف على النصوص. تأكد من وضوح إضاءة الملصق وجرب مجدداً.";
+                statusDiv.innerText = "فشل التعرف التلقائي. تأكد من ثبات يدك ووضوح إضاءة الملصق ثم جرب مجدداً.";
                 console.error(e);
             }
         }
@@ -180,12 +203,12 @@
                 "الرقم التسلسلي": document.getElementById('device-serial').value,
                 "تاريخ الجرد": new Date().toLocaleDateString('ar-EG')
             });
-            statusDiv.innerText = `تم الحفظ! إجمالي الأجهزة: ${inventoryList.length}`;
+            statusDiv.innerText = `تم الحفظ! إجمالي الأجهزة المسجلة: ${inventoryList.length}`;
             ['device-type', 'device-brand', 'device-model', 'device-serial'].forEach(id => document.getElementById(id).value = '');
         });
 
         document.getElementById('export-btn').addEventListener('click', () => {
-            if(inventoryList.length === 0) return alert("لا توجد بيانات!");
+            if(inventoryList.length === 0) return alert("لا توجد بيانات مسجلة لتصديرها!");
             const worksheet = XLSX.utils.json_to_sheet(inventoryList);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "الجرد");
